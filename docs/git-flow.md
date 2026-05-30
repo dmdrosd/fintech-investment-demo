@@ -1,18 +1,18 @@
 # Git Flow
 
-This repository uses a lightweight Git Flow model.
+В репозитории используется облегчённая модель Git Flow.
 
-## Branches
+## Ветки
 
-- `main` contains stable code.
-- `develop` is used for integration before a release.
-- `feature/<name>` branches are used for application changes.
-- `release/<version>` branches are used for final release checks.
-- `hotfix/<name>` branches are used for urgent fixes from `main`.
+- `main` содержит стабильный код.
+- `develop` используется для интеграции изменений перед релизом.
+- `feature/<name>` используется для изменений в приложении.
+- `release/<version>` используется для финальных проверок перед релизом.
+- `hotfix/<name>` используется для срочных исправлений от `main`.
 
-## Typical Workflow
+## Типовой Процесс
 
-Create a feature branch from `develop`:
+Создать feature-ветку от `develop`:
 
 ```bash
 git checkout develop
@@ -20,25 +20,25 @@ git pull
 git checkout -b feature/audit-chain-status
 ```
 
-Before opening a pull request:
+Перед pull request:
 
 ```bash
 dotnet build Fintech.InvestmentDemo.slnx
 dotnet test tests/Fintech.Api.Tests/Fintech.Api.Tests.csproj
 ```
 
-Merge order:
+Порядок merge:
 
 1. `feature/*` -> `develop`
 2. `develop` -> `release/*`
 3. `release/*` -> `main`
 4. `main` -> `develop`
 
-For small fixes, `hotfix/*` can branch from `main` and then be merged back into both `main` and `develop`.
+Для небольших срочных исправлений `hotfix/*` можно создавать от `main`, а затем вливать обратно в `main` и `develop`.
 
-## Commit Style
+## Стиль Коммитов
 
-Use short imperative commit messages:
+Коммиты пишутся коротко, в повелительном наклонении:
 
 ```text
 Add audit chain status endpoint
@@ -46,9 +46,13 @@ Fix idempotency retry handling
 Update compose health checks
 ```
 
-## Pull Request Checklist
+## Документация
 
-- Build passes.
-- Tests pass.
-- Docker Compose still starts locally when infrastructure files changed.
-- Public docs are updated when behavior or setup changes.
+Публичная документация ведётся на русском языке. Технические имена, команды, endpoint-ы и названия классов остаются на английском.
+
+## Checklist Для Pull Request
+
+- Сборка проходит.
+- Тесты проходят.
+- Docker Compose проверен локально, если менялась инфраструктура.
+- Публичная документация обновлена, если изменилось поведение или способ запуска.

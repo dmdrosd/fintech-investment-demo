@@ -1,35 +1,35 @@
 # Fintech Investment Demo
 
-A compact .NET demo application for processing investment operation requests.
+Компактное demo-приложение на .NET для обработки заявок на инвестиционные операции.
 
-The project shows a typical internal fintech workflow: a Blazor/MudBlazor web form sends requests to an ASP.NET Core API, the API stores data in PostgreSQL, writes an audit trail, supports Keycloak-ready authentication, and runs as containerized services.
+Проект показывает типичный внутренний fintech-сценарий: веб-форма на Blazor/MudBlazor отправляет заявки в ASP.NET Core API, API сохраняет данные в PostgreSQL, ведёт аудит, поддерживает Keycloak-ready аутентификацию и запускается как набор контейнеризованных сервисов.
 
-## Stack
+## Стек
 
 - .NET 8, C#
 - ASP.NET Core Web API
 - Blazor Server
 - MudBlazor
-- PostgreSQL with EF Core and Npgsql
+- PostgreSQL, EF Core, Npgsql
 - Keycloak-ready JWT authentication
 - .NET Aspire AppHost
 - Docker Compose
 - xUnit tests
 
-## Features
+## Возможности
 
-- Investment request creation form with validation and loading states.
-- Request list with status transitions.
-- PostgreSQL persistence with EF Core migrations.
-- Idempotent request creation using the `Idempotency-Key` header.
-- Optimistic concurrency with expected version checks.
-- Audit log for request creation and status changes.
-- SHA-256 audit hash-chain for tamper-evident audit verification.
-- Development authentication mode for local runs.
-- Keycloak realm import with `operator` and `auditor` roles.
-- Health checks for API and PostgreSQL.
+- Форма создания инвестиционной заявки с валидацией и loading-состояниями.
+- Список заявок со сменой статусов.
+- Хранение данных в PostgreSQL через EF Core migrations.
+- Идемпотентное создание заявки через header `Idempotency-Key`.
+- Optimistic concurrency через проверку ожидаемой версии.
+- Audit log для создания заявки и смены статуса.
+- SHA-256 audit hash-chain для tamper-evident проверки аудита.
+- Development auth mode для локального запуска.
+- Keycloak realm import с ролями `operator` и `auditor`.
+- Health checks для API и PostgreSQL.
 
-## Architecture
+## Архитектура
 
 ```text
 Blazor Web UI
@@ -44,13 +44,13 @@ ASP.NET Core API
     +-- Audit log with SHA-256 hash-chain
 ```
 
-## Run With Docker Compose
+## Запуск Через Docker Compose
 
 ```powershell
 docker compose up -d --build
 ```
 
-After startup:
+После запуска:
 
 - Web UI: http://localhost:8082
 - API Swagger: http://localhost:8081/swagger
@@ -63,33 +63,33 @@ Keycloak admin:
 - Login: `admin`
 - Password: `admin`
 
-Demo user in realm `fintech-demo`:
+Demo user в realm `fintech-demo`:
 
 - Login: `operator`
 - Password: `Passw0rd!`
 
-By default, Docker Compose runs the API with `Auth__Mode=Development`, so the UI works locally without an OIDC login flow. Keycloak is still started and imports the realm, so the JWT mode can be tested by switching `Auth__Mode=Keycloak` and passing a valid access token to the API.
+По умолчанию Docker Compose запускает API с `Auth__Mode=Development`, поэтому UI работает локально без OIDC login flow. Keycloak при этом тоже поднимается и импортирует realm, так что JWT mode можно проверить отдельно: переключить `Auth__Mode=Keycloak` и передавать валидный access token в API.
 
-## Build And Test
+## Сборка И Тесты
 
 ```powershell
 dotnet build Fintech.InvestmentDemo.slnx
 dotnet test tests\Fintech.Api.Tests\Fintech.Api.Tests.csproj
 ```
 
-## Run With Aspire
+## Запуск Через Aspire
 
 ```powershell
 dotnet run --project src\Fintech.AppHost\Fintech.AppHost.csproj
 ```
 
-The AppHost describes PostgreSQL, Keycloak, the API, the web application, and service dependencies.
+AppHost описывает PostgreSQL, Keycloak, API, web-приложение и зависимости между сервисами.
 
-## Development Workflow
+## Процесс Разработки
 
-The repository uses a lightweight Git Flow model with `main`, `develop`, `feature/*`, `release/*`, and `hotfix/*` branches. See [docs/git-flow.md](docs/git-flow.md).
+В репозитории используется облегчённый Git Flow с ветками `main`, `develop`, `feature/*`, `release/*` и `hotfix/*`. Подробности: [docs/git-flow.md](docs/git-flow.md).
 
-## Useful Endpoints
+## Полезные Endpoints
 
 - `GET /api/investment-requests`
 - `POST /api/investment-requests`
@@ -99,13 +99,13 @@ The repository uses a lightweight Git Flow model with `main`, `develop`, `featur
 - `GET /health/live`
 - `GET /health/ready`
 
-## Clean Up
+## Очистка
 
 ```powershell
 docker compose down
 ```
 
-Remove PostgreSQL data as well:
+Удалить данные PostgreSQL:
 
 ```powershell
 docker compose down -v

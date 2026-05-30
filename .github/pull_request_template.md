@@ -1,13 +1,13 @@
-## Summary
+## Что Изменилось
 
 - 
 
-## Checks
+## Проверки
 
 - [ ] `dotnet build Fintech.InvestmentDemo.slnx`
 - [ ] `dotnet test tests/Fintech.Api.Tests/Fintech.Api.Tests.csproj`
-- [ ] Docker Compose checked if infrastructure changed
+- [ ] Docker Compose проверен, если менялась инфраструктура
 
-## Notes
+## Заметки
 
 - 
