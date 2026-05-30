@@ -1,0 +1,6 @@
+@Fintech.Api_HostAddress = http://localhost:5252
+
+GET {{Fintech.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

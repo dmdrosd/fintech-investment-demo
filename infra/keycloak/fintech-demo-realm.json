@@ -1,0 +1,74 @@
+{
+  "realm": "fintech-demo",
+  "enabled": true,
+  "displayName": "Fintech Investment Demo",
+  "roles": {
+    "realm": [
+      {
+        "name": "operator",
+        "description": "Can create and process investment requests"
+      },
+      {
+        "name": "auditor",
+        "description": "Can read audit log"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "investment-api",
+      "name": "Investment API",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "investment-api-secret",
+      "serviceAccountsEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "redirectUris": [
+        "http://localhost:8082/*",
+        "http://localhost:5078/*"
+      ],
+      "webOrigins": [
+        "http://localhost:8082",
+        "http://localhost:5078"
+      ],
+      "protocolMappers": [
+        {
+          "name": "realm roles as roles claim",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "operator",
+      "enabled": true,
+      "firstName": "Demo",
+      "lastName": "Operator",
+      "email": "operator@example.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Passw0rd!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "operator",
+        "auditor"
+      ]
+    }
+  ]
+}

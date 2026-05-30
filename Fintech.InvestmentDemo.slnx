@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Fintech.Api/Fintech.Api.csproj" />
+    <Project Path="src/Fintech.AppHost/Fintech.AppHost.csproj" />
+    <Project Path="src/Fintech.Web/Fintech.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Fintech.Api.Tests/Fintech.Api.Tests.csproj" />
+  </Folder>
+</Solution>

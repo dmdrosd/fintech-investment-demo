@@ -1,0 +1,276 @@
+@page "/"
+@inject InvestmentApiClient Api
+@inject ISnackbar Snackbar
+
+<PageTitle>Investment desk</PageTitle>
+
+<MudStack Spacing="3">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="page-heading">
+        <div>
+            <MudText Typo="Typo.h5" Style="font-weight:700">Заявки на инвестиционные операции</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Blazor/MudBlazor + ASP.NET Core API + PostgreSQL + Keycloak-ready auth + SHA-256 audit chain</MudText>
+        </div>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadAsync" Disabled="_loading">
+            Обновить
+        </MudButton>
+    </MudStack>
+
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true">@_error</MudAlert>
+    }
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" md="5">
+            <MudPaper Class="panel" Elevation="0">
+                <MudText Typo="Typo.h6" Style="font-weight:700">Новая заявка</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">Форма показывает validation, loading state и защиту от повторного submit.</MudText>
+
+                <MudForm @ref="_form" Model="_model">
+                    <MudStack Spacing="2">
+                        <MudTextField @bind-Value="_model.ClientName"
+                                      Label="Клиент"
+                                      For="@(() => _model.ClientName)"
+                                      Variant="Variant.Outlined"
+                                      Immediate="true"
+                                      Disabled="_submitting" />
+
+                        <MudGrid Spacing="2">
+                            <MudItem xs="12" sm="6">
+                                <MudSelect T="string" @bind-Value="_model.Instrument" Label="Инструмент" Variant="Variant.Outlined" Disabled="_submitting">
+                                    @foreach (var instrument in _instruments)
+                                    {
+                                        <MudSelectItem Value="@instrument">@instrument</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudSelect T="OperationType" @bind-Value="_model.OperationType" Label="Операция" Variant="Variant.Outlined" Disabled="_submitting">
+                                    <MudSelectItem Value="OperationType.Buy">Покупка</MudSelectItem>
+                                    <MudSelectItem Value="OperationType.Sell">Продажа</MudSelectItem>
+                                </MudSelect>
+                            </MudItem>
+                        </MudGrid>
+
+                        <MudGrid Spacing="2">
+                            <MudItem xs="12" sm="7">
+                                <MudNumericField T="decimal" @bind-Value="_model.Amount"
+                                                 Label="Сумма"
+                                                 For="@(() => _model.Amount)"
+                                                 Variant="Variant.Outlined"
+                                                 Min="1"
+                                                 Disabled="_submitting" />
+                            </MudItem>
+                            <MudItem xs="12" sm="5">
+                                <MudSelect T="string" @bind-Value="_model.Currency" Label="Валюта" Variant="Variant.Outlined" Disabled="_submitting">
+                                    <MudSelectItem Value="@("RUB")">RUB</MudSelectItem>
+                                    <MudSelectItem Value="@("USD")">USD</MudSelectItem>
+                                    <MudSelectItem Value="@("EUR")">EUR</MudSelectItem>
+                                    <MudSelectItem Value="@("CNY")">CNY</MudSelectItem>
+                                </MudSelect>
+                            </MudItem>
+                        </MudGrid>
+
+                        <MudAlert Severity="Severity.Info" Variant="Variant.Text" Dense="true">
+                            API добавит Idempotency-Key, сохранит заявку и hash-chain audit log в одной транзакции.
+                        </MudAlert>
+
+                        <MudButton Color="Color.Primary"
+                                   Variant="Variant.Filled"
+                                   StartIcon="@Icons.Material.Filled.Send"
+                                   Disabled="_submitting"
+                                   OnClick="SubmitAsync">
+                            @(_submitting ? "Отправка..." : "Отправить заявку")
+                        </MudButton>
+                    </MudStack>
+                </MudForm>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="7">
+            <MudPaper Class="panel" Elevation="0">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-2">
+                    <div>
+                        <MudText Typo="Typo.h6" Style="font-weight:700">Последние заявки</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Смена статуса использует expected version и возвращает 409 при конфликте.</MudText>
+                    </div>
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Style="@(_loading ? null : "visibility:hidden")" />
+                </MudStack>
+
+                <MudTable Items="_requests" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>Клиент</MudTh>
+                        <MudTh>Инструмент</MudTh>
+                        <MudTh>Сумма</MudTh>
+                        <MudTh>Статус</MudTh>
+                        <MudTh>Версия</MudTh>
+                        <MudTh></MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Клиент">
+                            <MudText Typo="Typo.body2" Style="font-weight:600">@context.ClientName</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@context.CreatedAt.LocalDateTime.ToString("dd.MM HH:mm") · @context.CreatedBy</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Инструмент">@context.OperationType @context.Instrument</MudTd>
+                        <MudTd DataLabel="Сумма">@context.Amount.ToString("N2") @context.Currency</MudTd>
+                        <MudTd DataLabel="Статус">
+                            <MudChip T="string" Size="Size.Small" Color="@StatusColor(context.Status)" Variant="Variant.Outlined">@StatusText(context.Status)</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Версия">@context.Version</MudTd>
+                        <MudTd>
+                            <MudMenu Icon="@Icons.Material.Filled.MoreVert" Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                                <MudMenuItem OnClick="@(() => ChangeStatusAsync(context, RequestStatus.Approved))">Approve</MudMenuItem>
+                                <MudMenuItem OnClick="@(() => ChangeStatusAsync(context, RequestStatus.Rejected))">Reject</MudMenuItem>
+                                <MudMenuItem OnClick="@(() => ChangeStatusAsync(context, RequestStatus.Executed))">Execute</MudMenuItem>
+                            </MudMenu>
+                        </MudTd>
+                    </RowTemplate>
+                    <NoRecordsContent>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Заявок пока нет. Создай первую через форму.</MudText>
+                    </NoRecordsContent>
+                </MudTable>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Class="panel" Elevation="0">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="audit-chain">
+            <div>
+                <MudText Typo="Typo.h6" Style="font-weight:700">Audit hash-chain</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">SHA-256 цепочка аудита для tamper-evident проверки операций.</MudText>
+            </div>
+            <MudChip T="string"
+                     Size="Size.Small"
+                     Color="@(_auditChain?.IsValid == true ? Color.Success : Color.Warning)"
+                     Variant="Variant.Outlined">
+                @AuditChainLabel
+            </MudChip>
+        </MudStack>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="hash-text">@AuditChainHash</MudText>
+    </MudPaper>
+</MudStack>
+
+@code {
+    private readonly string[] _instruments = ["BANK", "GAZP", "SBER", "MOEX", "BTC-ETF", "TOKEN-BOND"];
+    private readonly CreateInvestmentRequestModel _model = new();
+    private List<InvestmentRequestResponse> _requests = [];
+    private AuditChainStatusResponse? _auditChain;
+    private MudForm? _form;
+    private bool _loading;
+    private bool _submitting;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _requests = (await Api.GetLatestAsync(CancellationToken.None)).ToList();
+            _auditChain = await Api.GetAuditChainStatusAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _error = $"API недоступен: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (_form is null)
+        {
+            return;
+        }
+
+        await _form.Validate();
+        if (!_form.IsValid)
+        {
+            return;
+        }
+
+        _submitting = true;
+        _error = null;
+        try
+        {
+            var result = await Api.CreateAsync(_model, CancellationToken.None);
+            if (!result.IsSuccess || result.Value is null)
+            {
+                _error = $"API вернул ошибку {result.StatusCode}: {result.Error}";
+                return;
+            }
+
+            Snackbar.Add($"Заявка создана: {result.Value.Id}", Severity.Success);
+            _requests.Insert(0, result.Value);
+            _auditChain = await Api.GetAuditChainStatusAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Не удалось создать заявку: {ex.Message}";
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+
+    private async Task ChangeStatusAsync(InvestmentRequestResponse request, RequestStatus status)
+    {
+        var result = await Api.UpdateStatusAsync(request, status, CancellationToken.None);
+        if (!result.IsSuccess || result.Value is null)
+        {
+            Snackbar.Add($"Не удалось сменить статус: {result.StatusCode}", Severity.Error);
+            return;
+        }
+
+        var index = _requests.FindIndex(x => x.Id == request.Id);
+        if (index >= 0)
+        {
+            _requests[index] = result.Value;
+        }
+
+        _auditChain = await Api.GetAuditChainStatusAsync(CancellationToken.None);
+        Snackbar.Add($"Статус обновлен: {StatusText(result.Value.Status)}", Severity.Success);
+    }
+
+    private string AuditChainLabel => _auditChain is null
+        ? "not loaded"
+        : _auditChain.IsValid
+            ? $"{_auditChain.EntriesChecked} linked"
+            : "broken";
+
+    private string AuditChainHash => _auditChain is null
+        ? "head: unavailable"
+        : $"head: {ShortHash(_auditChain.HeadHash)}";
+
+    private static string ShortHash(string hash)
+    {
+        return hash.Length <= 16 ? hash : $"{hash[..12]}...{hash[^8..]}";
+    }
+
+    private static Color StatusColor(RequestStatus status) => status switch
+    {
+        RequestStatus.PendingCompliance => Color.Warning,
+        RequestStatus.Approved => Color.Info,
+        RequestStatus.Rejected => Color.Error,
+        RequestStatus.Executed => Color.Success,
+        _ => Color.Default
+    };
+
+    private static string StatusText(RequestStatus status) => status switch
+    {
+        RequestStatus.PendingCompliance => "Compliance",
+        RequestStatus.Approved => "Approved",
+        RequestStatus.Rejected => "Rejected",
+        RequestStatus.Executed => "Executed",
+        _ => "Draft"
+    };
+}

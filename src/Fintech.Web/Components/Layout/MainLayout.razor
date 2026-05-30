@@ -1,0 +1,47 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="_theme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="0" Color="Color.Default" Dense="true" Class="app-bar">
+        <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Color="Color.Primary" />
+        <MudText Typo="Typo.subtitle1" Class="ms-2" Style="font-weight:700">Fintech Investment Desk</MudText>
+        <MudSpacer />
+        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">Dev auth: operator/auditor</MudChip>
+    </MudAppBar>
+
+    <MudMainContent Class="app-content">
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">x</a>
+</div>
+
+@code {
+    private readonly MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#1f4e79",
+            Secondary = "#2e7d68",
+            Tertiary = "#7a5a00",
+            AppbarBackground = "#ffffff",
+            Background = "#f6f8fb",
+            Surface = "#ffffff",
+            TextPrimary = "#1f2933",
+            TextSecondary = "#5b6776",
+            Divider = "#d7dde5"
+        },
+        LayoutProperties = new LayoutProperties
+        {
+            DefaultBorderRadius = "6px"
+        }
+    };
+}
