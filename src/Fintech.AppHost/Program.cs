@@ -1,7 +1,13 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
+// Без WithDataVolume: БД эфемерная и при каждом запуске инициализируется
+// с актуальным сгенерированным паролем. Это убирает рассинхрон пароля со
+// старым томом (Postgres задаёт пароль только при первой инициализации).
+// POSTGRES_DB заставляет контейнер создать базу investment_demo при init,
+// иначе ресурс БД не станет healthy и api повиснет на WaitFor.
+// Для персистентности верни .WithDataVolume() и один раз удали старый том.
 var postgres = builder.AddPostgres("postgres")
-    .WithDataVolume()
+    .WithEnvironment("POSTGRES_DB", "investment_demo")
     .AddDatabase("investmentdb", "investment_demo");
 
 var keycloak = builder.AddContainer("keycloak", "quay.io/keycloak/keycloak", "25.0")

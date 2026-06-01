@@ -1,0 +1,36 @@
+@startuml audit-hash-chain
+title Audit hash-chain — как связаны записи (tamper-evident)
+
+skinparam shadowing false
+skinparam defaultTextAlignment center
+skinparam ArrowColor #1f4e79
+skinparam rectangle {
+  BackgroundColor #F6F8FB
+  BorderColor #1f4e79
+}
+skinparam NoteBackgroundColor #FDF6E3
+skinparam NoteBorderColor #b58900
+
+rectangle "Genesis\n00000...0 (64 нуля)" as g #EAF3EC
+
+rectangle "Запись #1\n----\nPayloadHash1 = SHA256(поля записи)\nPreviousHash = Genesis\n**CurrentHash1 = SHA256(PreviousHash : PayloadHash1)**" as b1
+rectangle "Запись #2\n----\nPayloadHash2 = SHA256(поля записи)\nPreviousHash = CurrentHash1\n**CurrentHash2 = SHA256(PreviousHash : PayloadHash2)**" as b2
+rectangle "Запись #3\n----\nPayloadHash3 = SHA256(поля записи)\nPreviousHash = CurrentHash2\n**CurrentHash3 = SHA256(PreviousHash : PayloadHash3)**" as b3
+
+g -right-> b1 : PreviousHash
+b1 -right-> b2 : CurrentHash1\n= PreviousHash2
+b2 -right-> b3 : CurrentHash2\n= PreviousHash3
+
+note bottom of b2
+  Подмена полей записи #2:
+  -> меняется PayloadHash2 -> меняется CurrentHash2
+  -> PreviousHash у записи #3 больше не сходится
+  -> проверка падает, начиная с #3 (видно ГДЕ сломано)
+end note
+
+note top of b1
+  Каждая запись «запечатывает» предыдущую через её CurrentHash.
+  Это hash-chain: tamper-evident (видно вмешательство),
+  но НЕ блокчейн — нет консенсуса и распределённости.
+end note
+@enduml

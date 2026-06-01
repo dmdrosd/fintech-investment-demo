@@ -195,7 +195,11 @@ public sealed class InvestmentRequestService(InvestmentDbContext db)
             Action = action,
             EntityType = "InvestmentRequest",
             EntityId = entityId,
-            CreatedAt = DateTimeOffset.UtcNow,
+            // Усечение до микросекунд: PostgreSQL timestamptz хранит 6 знаков,
+            // а DateTimeOffset.UtcNow — 100 нс (7 знаков). Без усечения хэш,
+            // посчитанный при записи, не совпадёт с пересчётом после round-trip из БД,
+            // и VerifyAuditChainAsync ложно покажет "broken".
+            CreatedAt = ToMicrosecondPrecision(DateTimeOffset.UtcNow),
             MetadataJson = JsonSerializer.Serialize(metadata)
         };
 
@@ -231,6 +235,13 @@ public sealed class InvestmentRequestService(InvestmentDbContext db)
     private static string ComputeCurrentHash(string previousHash, string payloadHash)
     {
         return Sha256Hex($"{previousHash}:{payloadHash}");
+    }
+
+    // 1 тик = 100 нс, 1 мкс = 10 тиков. Отбрасываем суб-микросекундную часть,
+    // чтобы значение совпадало с тем, что вернёт PostgreSQL timestamptz.
+    private static DateTimeOffset ToMicrosecondPrecision(DateTimeOffset value)
+    {
+        return new DateTimeOffset(value.Ticks - value.Ticks % 10, value.Offset);
     }
 
     private static string Sha256Hex(string value)

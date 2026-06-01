@@ -1,0 +1,52 @@
+@startuml create-investment-request
+title Создание заявки — поток запроса (идемпотентный)
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam ArrowColor #1f4e79
+skinparam ParticipantBorderColor #1f4e79
+skinparam ParticipantBackgroundColor #F6F8FB
+skinparam DatabaseBackgroundColor #EAF3EC
+skinparam NoteBackgroundColor #FDF6E3
+skinparam NoteBorderColor #b58900
+
+actor "Оператор" as user
+participant "Web\nBlazor + MudBlazor" as web
+participant "API\nASP.NET Core" as api
+database "PostgreSQL" as pg
+
+user -> web : заполняет форму, submit
+activate web
+note right of web : client-side валидация;\nкнопка disabled на время отправки\n(анти-double-submit)
+
+web -> api : POST /api/investment-requests\nheader Idempotency-Key\n(JWT или dev-заголовки)
+activate api
+
+api -> api : проверка Idempotency-Key\n(пусто -> 400 ProblemDetails)
+api -> api : authorize policy "operator"\n(валидация JWT: iss/aud/exp/подпись)
+
+api -> pg : SELECT по IdempotencyKey
+activate pg
+pg --> api : запись найдена?
+deactivate pg
+
+alt ключ уже использован (повтор / ретрай)
+  api --> web : 201, та же заявка\n(дубль НЕ создаётся)
+else новый ключ
+  group транзакция БД (атомарно)
+    api -> api : new InvestmentRequest\nstatus=PendingCompliance, Version=0
+    api -> api : audit: PreviousHash / PayloadHash /\nCurrentHash (SHA-256 hash-chain)
+    api -> pg : SaveChanges — INSERT\ninvestment_request + audit_log
+    api -> pg : COMMIT
+    activate pg
+    pg --> api : ok
+    deactivate pg
+  end
+  note right of api : unique index по IdempotencyKey —\nфинальная защита от гонки\nмежду SELECT и INSERT
+  api --> web : 201 Created + заявка
+end
+deactivate api
+
+web --> user : snackbar "успех",\nобновлённый список заявок
+deactivate web
+@enduml

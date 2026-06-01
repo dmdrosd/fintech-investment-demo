@@ -1,0 +1,46 @@
+@startuml update-status
+title Смена статуса заявки — optimistic concurrency
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam ArrowColor #1f4e79
+skinparam ParticipantBorderColor #1f4e79
+skinparam ParticipantBackgroundColor #F6F8FB
+skinparam DatabaseBackgroundColor #EAF3EC
+skinparam NoteBackgroundColor #FDF6E3
+skinparam NoteBorderColor #b58900
+
+actor "Оператор" as user
+participant "Web\nBlazor + MudBlazor" as web
+participant "API\nASP.NET Core" as api
+database "PostgreSQL" as pg
+
+user -> web : меняет статус\n(напр. Approved)
+activate web
+web -> api : PUT /api/investment-requests/{id}/status\n{ status, expectedVersion }
+activate api
+
+api -> api : authorize policy "operator"
+api -> pg : SELECT заявку по id
+activate pg
+pg --> api : заявка (Version = N) / null
+deactivate pg
+
+alt заявки нет
+  api --> web : 404 Not Found
+else expectedVersion != текущей Version
+  api --> web : 409 Conflict (ProblemDetails)\n"Request was changed. Current version is N"
+  note right of api : optimistic concurrency:\nкто-то изменил запись параллельно ->\nне перезаписываем молча
+else версия совпала
+  api -> api : Status = новый;  Version++\naudit: old -> new status (+ hash-chain)
+  api -> pg : SaveChanges — UPDATE заявки\n+ INSERT audit_log (атомарно)
+  activate pg
+  pg --> api : ok
+  deactivate pg
+  api --> web : 200 OK + заявка (Version = N+1)
+end
+deactivate api
+
+web --> user : новый статус / сообщение о конфликте
+deactivate web
+@enduml

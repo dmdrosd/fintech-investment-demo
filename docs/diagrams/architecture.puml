@@ -1,0 +1,48 @@
+@startuml fintech-investment-demo
+title Fintech Investment Demo — архитектура
+
+skinparam shadowing false
+skinparam defaultTextAlignment center
+skinparam ArrowColor #1f4e79
+skinparam rectangle {
+  BackgroundColor #F6F8FB
+  BorderColor #1f4e79
+}
+skinparam database {
+  BackgroundColor #EAF3EC
+  BorderColor #2e7d68
+}
+
+actor "Оператор / Аудитор" as user
+
+package "Локальный контур\n(.NET Aspire AppHost  /  Docker Compose)" as host {
+
+  rectangle "Web\n**Blazor Server + MudBlazor**\nформа заявки, валидация, состояния" as web
+  rectangle "API\n**ASP.NET Core**\npolicies: operator / auditor\nProblemDetails, health checks" as api
+  rectangle "Keycloak\n**Identity Provider (OIDC)**\nrealm fintech-demo\nroles: operator / auditor" as kc
+
+  database "PostgreSQL\nEF Core + Npgsql, migrations" as pg {
+    rectangle "investment_requests\nunique(IdempotencyKey)\nVersion (optimistic concurrency)" as t_req
+    rectangle "audit_logs\n**SHA-256 hash-chain**\nPreviousHash / PayloadHash / CurrentHash" as t_audit
+  }
+}
+
+user --> web : HTTPS\nформа заявки
+user ..> kc : 1. логин (OIDC)\nполучает JWT
+web --> api : typed HttpClient\nheader Idempotency-Key
+api --> pg : EF Core\n**одна транзакция:**\nзаявка + audit-запись
+api ..> kc : валидация JWT\n(JWKS: iss / aud / exp / подпись)\nroles -> policies
+
+note bottom of api
+  Идемпотентность: повтор с тем же ключом -> та же заявка
+  Optimistic concurrency: смена статуса по Version -> 409 при гонке
+  GET /api/audit/chain/status -> проверка целостности цепочки
+end note
+
+note right of t_audit
+  Каждая запись зависит от предыдущей.
+  Изменение старой записи ломает пересчёт.
+  Tamper-evident (не блокчейн: без консенсуса).
+end note
+
+@enduml

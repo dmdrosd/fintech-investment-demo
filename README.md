@@ -31,6 +31,34 @@
 
 ## Архитектура
 
+![Архитектура](docs/diagrams/architecture.png)
+
+Исходник диаграммы: [docs/diagrams/architecture.puml](docs/diagrams/architecture.puml) (рендер: `plantuml -tpng docs/diagrams/architecture.puml`).
+
+### Поток создания заявки (идемпотентный)
+
+![Создание заявки](docs/diagrams/create-investment-request.png)
+
+Исходник: [docs/diagrams/create-investment-request.puml](docs/diagrams/create-investment-request.puml).
+
+### Смена статуса (optimistic concurrency)
+
+![Смена статуса](docs/diagrams/update-status.png)
+
+Исходник: [docs/diagrams/update-status.puml](docs/diagrams/update-status.puml).
+
+### Audit hash-chain (tamper-evident)
+
+![Audit hash-chain](docs/diagrams/audit-hash-chain.png)
+
+Исходник: [docs/diagrams/audit-hash-chain.puml](docs/diagrams/audit-hash-chain.puml).
+
+### Проверка целостности — VerifyAuditChainAsync
+
+![Проверка цепочки](docs/diagrams/verify-audit-chain.png)
+
+Исходник: [docs/diagrams/verify-audit-chain.puml](docs/diagrams/verify-audit-chain.puml).
+
 ```text
 Blazor Web UI
     |

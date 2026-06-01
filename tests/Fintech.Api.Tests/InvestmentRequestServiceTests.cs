@@ -86,6 +86,36 @@ public sealed class InvestmentRequestServiceTests
         Assert.Equal(64, chain.HeadHash.Length);
     }
 
+    [Fact]
+    public async Task VerifyAuditChainAsync_StaysValid_WhenTimestampsTruncatedToMicroseconds()
+    {
+        await using var db = CreateDbContext();
+        var service = new InvestmentRequestService(db);
+
+        await service.CreateAsync(new CreateInvestmentRequestDto
+        {
+            ClientName = "Demo Client",
+            Instrument = "SBER",
+            Amount = 1234,
+            Currency = "RUB",
+            OperationType = OperationType.Buy
+        }, "pg-roundtrip-key", User(), CancellationToken.None);
+
+        // Имитируем round-trip через PostgreSQL timestamptz: усечь CreatedAt до микросекунд.
+        // С фиксом время уже усечено при записи -> это no-op и цепочка валидна.
+        // Без фикса хэш считался от 100-нс времени -> после усечения пересчёт разойдётся -> broken.
+        foreach (var log in db.AuditLogs)
+        {
+            log.CreatedAt = new DateTimeOffset(log.CreatedAt.Ticks - log.CreatedAt.Ticks % 10, log.CreatedAt.Offset);
+        }
+
+        await db.SaveChangesAsync();
+
+        var chain = await service.VerifyAuditChainAsync(CancellationToken.None);
+
+        Assert.True(chain.IsValid);
+    }
+
     private static InvestmentDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<InvestmentDbContext>()

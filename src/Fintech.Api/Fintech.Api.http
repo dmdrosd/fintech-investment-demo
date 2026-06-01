@@ -1,6 +1,65 @@
-@Fintech.Api_HostAddress = http://localhost:5252
+### Демо API: идемпотентность, optimistic concurrency, audit hash-chain.
 
-GET {{Fintech.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+@host = http://localhost:8081
+# docker compose -> 8081 (как здесь)
+# API standalone (без Aspire/Compose) -> http://localhost:5252
+# под Aspire порт динамический -> возьми из dashboard у ресурса "api"
 
-###
+@idemKey = demo-1
+
+### 0. Health — проверка, что API жив
+GET {{host}}/health/live
+
+### 1. Создать заявку (с Idempotency-Key) — первый раз
+# @name create1
+POST {{host}}/api/investment-requests
+Content-Type: application/json
+Idempotency-Key: {{idemKey}}
+X-User-Id: dev-operator
+X-User-Name: Demo Operator
+X-Roles: operator,auditor
+
+{
+  "clientName": "Acme Capital",
+  "instrument": "SBER",
+  "amount": 1500000,
+  "currency": "RUB",
+  "operationType": "Buy"
+}
+
+### 2. Повтор ТЕМ ЖЕ ключом — дубль НЕ создаётся (тот же "id"!)
+# @name create2
+POST {{host}}/api/investment-requests
+Content-Type: application/json
+Idempotency-Key: {{idemKey}}
+X-Roles: operator,auditor
+
+{
+  "clientName": "Acme Capital",
+  "instrument": "SBER",
+  "amount": 1500000,
+  "currency": "RUB",
+  "operationType": "Buy"
+}
+# Сравни поле "id" в ответах 1 и 2 — одинаковое. Заявка в системе одна.
+
+### 3. Список заявок — видно, что заявка одна
+GET {{host}}/api/investment-requests
+X-Roles: operator,auditor
+
+### 4. Целостность audit hash-chain (isValid: true)
+GET {{host}}/api/audit/chain/status
+X-Roles: operator,auditor
+
+### 5. Optimistic concurrency: смена статуса с УСТАРЕВШЕЙ версией -> 409 Conflict
+# Берём id из ответа create1, expectedVersion ставим заведомо неверный (999).
+PUT {{host}}/api/investment-requests/{{create1.response.body.$.id}}/status
+Content-Type: application/json
+X-Roles: operator,auditor
+
+{
+  "status": "Approved",
+  "expectedVersion": 999
+}
+# expectedVersion=999 != текущей версии -> 409 Conflict (ProblemDetails).
+# Чтобы прошло успешно — подставь актуальный "version" из ответа create1.

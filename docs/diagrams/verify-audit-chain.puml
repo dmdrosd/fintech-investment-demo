@@ -1,0 +1,35 @@
+@startuml verify-audit-chain
+title VerifyAuditChainAsync — проверка целостности цепочки
+
+skinparam shadowing false
+skinparam ActivityBackgroundColor #F6F8FB
+skinparam ActivityBorderColor #1f4e79
+skinparam ActivityDiamondBackgroundColor #FDF6E3
+skinparam ArrowColor #1f4e79
+
+start
+:загрузить все audit_logs\nORDER BY CreatedAt, Id;
+:expectedPrev = GenesisHash;
+
+while (есть ещё записи?) is (да)
+  :взять следующую запись log;
+  :payloadHash = SHA256(поля log)\ncurrentHash = SHA256(log.PreviousHash : payloadHash);
+  if (log.PreviousHash == expectedPrev\nAND log.PayloadHash == payloadHash\nAND log.CurrentHash == currentHash ?) then (совпало)
+    :expectedPrev = log.CurrentHash;
+  else (разрыв)
+    :return { isValid = false,\n brokenAt = log.Id, ... };
+    stop
+  endif
+endwhile (нет)
+
+:return { isValid = true,\n count, head = expectedPrev };
+stop
+
+note right
+  Сравнение хэшей — через
+  CryptographicOperations.FixedTimeEquals
+  (constant-time, без timing-утечки).
+  Перед проверкой — backfill хэшей
+  для legacy-записей без них.
+end note
+@enduml
